@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<title>פורטוגזית בכרטיסיות | Português em Flashcards</title>
+
+<!-- PWA / iPhone "Add to Home Screen" support -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Português" />
+<meta name="theme-color" content="#0b7a3b" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="icon" href="icons/icon-192.png" />
+
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===================== HOME SCREEN ===================== -->
+  <section id="screen-home" class="screen active">
+    <header class="home-header">
+      <div class="home-title">
+        <h1>🇧🇷 פורטוגזית בכרטיסיות</h1>
+        <p class="subtitle">Learn Brazilian Portuguese · Aprenda Português</p>
+      </div>
+      <div class="streak-badge" id="streak-badge" title="רצף ימי לימוד / Study streak">
+        🔥 <span id="streak-count">0</span>
+      </div>
+    </header>
+
+    <div id="levels-container"></div>
+
+    <footer class="home-footer">
+      <button id="reset-progress-btn" class="link-btn">אפס התקדמות / Reset progress</button>
+    </footer>
+  </section>
+
+  <!-- ===================== LESSON SCREEN ===================== -->
+  <section id="screen-lesson" class="screen">
+    <header class="lesson-header">
+      <button id="back-btn" class="icon-btn" aria-label="חזרה / Back">←</button>
+      <div class="lesson-progress-wrap">
+        <div class="lesson-progress-bar"><div id="lesson-progress-fill"></div></div>
+        <span id="card-counter">1 / 10</span>
+      </div>
+      <button id="replay-audio-btn" class="icon-btn" aria-label="השמע / Play">🔊</button>
+    </header>
+
+    <div class="card-stage">
+      <div id="flashcard" class="flashcard">
+        <div class="flashcard-face flashcard-front">
+          <div class="pt-word" id="pt-word" dir="ltr"></div>
+          <div class="tap-hint">הקש כדי לראות תרגום · tap to flip</div>
+        </div>
+        <div class="flashcard-face flashcard-back">
+          <div class="back-he" id="back-he"></div>
+          <div class="back-en" id="back-en" dir="ltr"></div>
+          <div class="back-pt" id="back-pt" dir="ltr"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lesson-controls">
+      <button id="prev-card-btn" class="nav-btn">◁ הקודם</button>
+      <button id="next-card-btn" class="nav-btn primary">הבא ▷</button>
+    </div>
+  </section>
+
+  <!-- ===================== LESSON COMPLETE SCREEN ===================== -->
+  <section id="screen-complete" class="screen">
+    <div class="complete-box">
+      <div class="complete-emoji">🎉</div>
+      <h2>כל הכבוד! / Great job!</h2>
+      <p id="complete-lesson-title"></p>
+      <button id="complete-repeat-btn" class="nav-btn">חזור על השלב / Repeat</button>
+      <button id="complete-continue-btn" class="nav-btn primary">המשך / Continue</button>
+    </div>
+  </section>
+
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
