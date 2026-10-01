@@ -153,12 +153,23 @@ html, body {
   box-shadow: 0 3px 0 #b8960b;
   color: #3a2e00;
 }
-.lesson-chip.done.needs-review {
-  background: #f59e0b;
-  box-shadow: 0 3px 0 #b45309;
-  color: white;
-}
 .lesson-chip:active:not(.locked) { transform: translateY(2px); box-shadow: none; }
+
+.unknown-words-btn {
+  display: block;
+  width: 100%;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #92400e;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  text-align: center;
+}
+.unknown-words-btn:active { transform: translateY(1px); }
 
 .home-footer { margin-top: auto; text-align: center; padding-top: 24px; }
 .link-btn {
@@ -192,6 +203,10 @@ html, body {
 .lesson-progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
 #lesson-progress-fill { height: 100%; width: 10%; background: var(--green); transition: width .25s ease; }
 #card-counter { font-size: 0.75rem; color: var(--muted); direction: ltr; }
+
+.unknown-btn { font-size: 1.25rem; opacity: 0.45; transition: opacity .15s ease, transform .15s ease; }
+.unknown-btn.active { opacity: 1; background: #fff7ed; box-shadow: 0 2px 6px rgba(245,158,11,0.4); }
+.unknown-btn:active { transform: scale(0.92); }
 
 .card-stage {
   flex: 1;
@@ -277,18 +292,8 @@ html, body {
 #complete-lesson-title { color: var(--muted); margin-bottom: 16px; }
 .complete-box .nav-btn { display: block; width: 100%; margin-bottom: 10px; }
 
-.review-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 20px;
-  text-align: right;
-  font-size: 0.85rem;
-  color: #92400e;
-  cursor: pointer;
+.review-btn {
+  background: #f59e0b !important;
+  color: white !important;
+  box-shadow: 0 3px 0 #b45309 !important;
 }
-.review-toggle input { width: 18px; height: 18px; flex-shrink: 0; accent-color: #f59e0b; }

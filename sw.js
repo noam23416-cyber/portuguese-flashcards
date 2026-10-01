@@ -3,7 +3,7 @@
 // (so updates you push show up immediately), and only falls back to the
 // last cached copy if there's no connection at all.
 
-const CACHE_NAME = "pt-flashcards-v2";
+const CACHE_NAME = "pt-flashcards-v3";
 const ASSETS = [
   "./",
   "./index.html",

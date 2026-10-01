@@ -32,6 +32,8 @@
       </div>
     </header>
 
+    <button id="unknown-words-btn" class="unknown-words-btn" style="display:none;"></button>
+
     <div id="category-tabs" class="category-tabs"></div>
 
     <div id="levels-container"></div>
@@ -50,6 +52,7 @@
         <span id="card-counter">1 / 10</span>
       </div>
       <button id="replay-audio-btn" class="icon-btn" aria-label="השמע / Play">🔊</button>
+      <button id="mark-unknown-btn" class="icon-btn unknown-btn" aria-label="לא ידעתי / Don't know">🏳️</button>
     </header>
 
     <div class="card-stage">
@@ -78,10 +81,7 @@
       <div class="complete-emoji">🎉</div>
       <h2>כל הכבוד! / Great job!</h2>
       <p id="complete-lesson-title"></p>
-      <label class="review-toggle">
-        <input type="checkbox" id="mark-review-checkbox" />
-        <span>היו מילים שלא ידעתי — סמן לי לחזור לשלב הזה</span>
-      </label>
+      <button id="complete-review-btn" class="nav-btn review-btn" style="display:none;"></button>
       <button id="complete-repeat-btn" class="nav-btn">חזור על השלב / Repeat</button>
       <button id="complete-continue-btn" class="nav-btn primary">המשך / Continue</button>
     </div>

@@ -7,7 +7,7 @@ const STORAGE_KEY = "pt_app_progress_v1";
 function defaultProgress() {
   return {
     completedLessons: [],
-    reviewLessons: [], // lessons marked "there were words I didn't know"
+    unknownCards: [], // keys "lessonId::pt" for individual cards marked "I didn't know this"
     streak: 0,
     lastStudyDate: null,
     activeCategory: "words"
@@ -72,18 +72,61 @@ function isLessonDone(lessonId) {
   return progress.completedLessons.includes(lessonId);
 }
 
-function needsReview(lessonId) {
-  return progress.reviewLessons.includes(lessonId);
+// ---------------- Per-card "I didn't know this" marking ----------------
+// Cards are identified by "<lessonId>::<pt text>" so marks survive content
+// reordering as long as the Portuguese text itself doesn't change.
+function cardKey(lessonId, card) {
+  return lessonId + "::" + card.pt;
 }
 
-function setNeedsReview(lessonId, flag) {
-  const has = progress.reviewLessons.includes(lessonId);
-  if (flag && !has) {
-    progress.reviewLessons.push(lessonId);
-  } else if (!flag && has) {
-    progress.reviewLessons = progress.reviewLessons.filter(id => id !== lessonId);
+// A card carries its origin lesson id as "_origLessonId" once it's been
+// pulled into a review session (so marking still points back to the
+// lesson it actually came from, even inside a cross-lesson review mix).
+function originLessonId(card) {
+  if (card._origLessonId !== undefined && card._origLessonId !== null) {
+    return card._origLessonId;
+  }
+  return currentLesson ? currentLesson.id : null;
+}
+
+function isCardUnknown(card) {
+  return progress.unknownCards.includes(cardKey(originLessonId(card), card));
+}
+
+function toggleCardUnknown(card) {
+  const key = cardKey(originLessonId(card), card);
+  const idx = progress.unknownCards.indexOf(key);
+  if (idx === -1) {
+    progress.unknownCards.push(key);
+  } else {
+    progress.unknownCards.splice(idx, 1);
   }
   saveProgress(progress);
+}
+
+// Tags each card in a list with its current origin lesson id, so the tag
+// survives being carried into a review session (where currentLesson.id
+// changes to "review").
+function withOrigin(cards) {
+  return cards.map(c => Object.assign({}, c, { _origLessonId: originLessonId(c) }));
+}
+
+// Resolves every globally-marked-unknown card back to a real card object,
+// across all lessons, for the home-screen "practice unknown words" entry.
+function getAllUnknownCardObjects() {
+  const result = [];
+  progress.unknownCards.forEach(key => {
+    const sep = key.indexOf("::");
+    if (sep === -1) return;
+    const lessonId = Number(key.slice(0, sep));
+    const pt = key.slice(sep + 2);
+    const lesson = LESSONS.find(l => l.id === lessonId);
+    if (!lesson) return;
+    const card = lesson.cards.find(c => c.pt === pt);
+    if (!card) return;
+    result.push(Object.assign({}, card, { _origLessonId: lessonId }));
+  });
+  return result;
 }
 
 // ---------------- Screen navigation ----------------
@@ -151,6 +194,16 @@ function renderHome() {
   document.getElementById("streak-count").textContent = progress.streak || 0;
   renderCategoryTabs();
 
+  const unknownBtn = document.getElementById("unknown-words-btn");
+  const totalUnknown = progress.unknownCards.length;
+  if (totalUnknown > 0) {
+    unknownBtn.style.display = "block";
+    unknownBtn.textContent =
+      `🏳️ תרגל ${totalUnknown} מילים שלא ידעת / Practice ${totalUnknown} unknown words`;
+  } else {
+    unknownBtn.style.display = "none";
+  }
+
   const container = document.getElementById("levels-container");
   container.innerHTML = "";
 
@@ -187,17 +240,13 @@ function renderHome() {
       const btn = document.createElement("button");
       const unlocked = isLessonUnlocked(lessonId);
       const done = isLessonDone(lessonId);
-      const flagged = done && needsReview(lessonId);
       btn.className = "lesson-chip" +
         (!unlocked ? " locked" : "") +
-        (done ? " done" : "") +
-        (flagged ? " needs-review" : "");
-      const badge = flagged ? "↻" : (done ? "✓" : (unlocked ? idx + 1 : "🔒"));
+        (done ? " done" : "");
+      const badge = done ? "✓" : (unlocked ? idx + 1 : "🔒");
       const topicLabel = lesson.short || lesson.title.he;
       btn.innerHTML = `<span class="chip-num">${badge}</span><span class="chip-topic">${topicLabel}</span>`;
-      btn.title = flagged
-        ? `${lesson.title.he} / ${lesson.title.en} — מסומן לחזרה`
-        : `${lesson.title.he} / ${lesson.title.en}`;
+      btn.title = `${lesson.title.he} / ${lesson.title.en}`;
       if (unlocked) {
         btn.addEventListener("click", () => openLesson(lessonId));
       }
@@ -213,12 +262,35 @@ function renderHome() {
 let currentLesson = null;
 let currentIndex = 0;
 let isFlipped = false;
+let isReviewMode = false; // true while practicing a dynamically-built "unknown words" set
+let pendingReviewCards = []; // cards offered on the complete screen's review button
 
 function openLesson(lessonId) {
   currentLesson = LESSONS.find(l => l.id === lessonId);
+  isReviewMode = false;
   currentIndex = 0;
   showScreen("screen-lesson");
   renderCard();
+}
+
+// Starts a practice session built from an arbitrary list of cards (e.g.
+// the ones just marked "didn't know this") instead of a fixed lesson.
+// Cards must already carry a usable origin lesson id (see withOrigin /
+// getAllUnknownCardObjects) so marking still works correctly inside it.
+function startReviewSession(cards, titleHe, titleEn) {
+  currentLesson = { id: "review", title: { he: titleHe, en: titleEn }, cards: cards };
+  isReviewMode = true;
+  currentIndex = 0;
+  showScreen("screen-lesson");
+  renderCard();
+}
+
+function restartCurrentSession() {
+  if (isReviewMode) {
+    startReviewSession(currentLesson.cards, currentLesson.title.he, currentLesson.title.en);
+  } else {
+    openLesson(currentLesson.id);
+  }
 }
 
 function renderCard() {
@@ -244,6 +316,7 @@ function renderCard() {
 
   document.getElementById("prev-card-btn").disabled = currentIndex === 0;
   updateNextButtonLabel();
+  updateUnknownBtn();
 
   // re-enable the flip animation on the next frame, after the instant
   // snap-back above has already taken effect
@@ -255,6 +328,11 @@ function renderCard() {
   if (!card.full) {
     speakPortuguese(card.pt);
   }
+}
+
+function updateUnknownBtn() {
+  const card = currentLesson.cards[currentIndex];
+  document.getElementById("mark-unknown-btn").classList.toggle("active", isCardUnknown(card));
 }
 
 function updateNextButtonLabel() {
@@ -303,23 +381,30 @@ function prevCard() {
 }
 
 function finishLesson() {
-  if (!progress.completedLessons.includes(currentLesson.id)) {
-    progress.completedLessons.push(currentLesson.id);
+  if (!isReviewMode) {
+    if (!progress.completedLessons.includes(currentLesson.id)) {
+      progress.completedLessons.push(currentLesson.id);
+    }
+    bumpStreak();
+    saveProgress(progress);
   }
-  bumpStreak();
-  saveProgress(progress);
 
   document.getElementById("complete-lesson-title").textContent =
     `${currentLesson.title.he} · ${currentLesson.title.en}`;
-  document.getElementById("mark-review-checkbox").checked = needsReview(currentLesson.id);
-  showScreen("screen-complete");
-}
 
-// Reads the "there were words I didn't know" checkbox on the complete
-// screen and saves it as the lesson's review flag.
-function applyReviewFlagFromCheckbox() {
-  const checked = document.getElementById("mark-review-checkbox").checked;
-  setNeedsReview(currentLesson.id, checked);
+  // Offer to immediately practice just the cards marked "didn't know
+  // this" during the session that was just finished.
+  pendingReviewCards = withOrigin(currentLesson.cards.filter(c => isCardUnknown(c)));
+  const reviewBtn = document.getElementById("complete-review-btn");
+  if (pendingReviewCards.length > 0) {
+    reviewBtn.style.display = "block";
+    reviewBtn.textContent =
+      `🏳️ תרגל ${pendingReviewCards.length} מילים שלא ידעת / Practice unknown words`;
+  } else {
+    reviewBtn.style.display = "none";
+  }
+
+  showScreen("screen-complete");
 }
 
 // ---------------- Swipe gestures ----------------
@@ -348,17 +433,30 @@ document.addEventListener("DOMContentLoaded", () => {
     const card = currentLesson.cards[currentIndex];
     speakPortuguese(card.full || card.pt);
   });
+  document.getElementById("mark-unknown-btn").addEventListener("click", () => {
+    if (!currentLesson) return;
+    toggleCardUnknown(currentLesson.cards[currentIndex]);
+    updateUnknownBtn();
+  });
+  document.getElementById("unknown-words-btn").addEventListener("click", () => {
+    const cards = getAllUnknownCardObjects();
+    if (cards.length === 0) return;
+    startReviewSession(cards, "מילים שלא ידעת", "Words you didn't know");
+  });
   document.getElementById("back-btn").addEventListener("click", () => {
     window.speechSynthesis && window.speechSynthesis.cancel();
     renderHome();
     showScreen("screen-home");
   });
   document.getElementById("complete-repeat-btn").addEventListener("click", () => {
-    applyReviewFlagFromCheckbox();
-    openLesson(currentLesson.id);
+    restartCurrentSession();
+  });
+  document.getElementById("complete-review-btn").addEventListener("click", () => {
+    const titleHe = `${currentLesson.title.he} – תרגול`;
+    const titleEn = `${currentLesson.title.en} – Review`;
+    startReviewSession(pendingReviewCards, titleHe, titleEn);
   });
   document.getElementById("complete-continue-btn").addEventListener("click", () => {
-    applyReviewFlagFromCheckbox();
     renderHome();
     showScreen("screen-home");
   });
