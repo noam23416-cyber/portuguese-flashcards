@@ -7,56 +7,86 @@
 // object and reference its id inside a level's `lessons` array.
 // ===================================================================
 
+// Each level belongs to a "category" — shown under one of the two tabs
+// on the home screen: "words" (vocabulary/grammar) or "numbers".
 const LEVELS = [
   {
     id: 1,
+    category: "words",
     title: { he: "יסודות", en: "Basics" },
-    lessons: [1, 2, 3, 4, 5]
+    lessons: [1, 4, 5, 56, 57]
   },
   {
     id: 2,
+    category: "words",
     title: { he: "חיי היומיום", en: "Daily Life" },
     lessons: [6, 7, 8, 9, 10]
   },
   {
     id: 3,
+    category: "words",
     title: { he: "פעלים ותיאורים", en: "Verbs & Descriptions" },
     lessons: [11, 12, 13, 14, 15]
   },
   {
     id: 4,
+    category: "words",
     title: { he: "שיחה", en: "Conversation" },
     lessons: [16, 17, 18, 19, 20]
   },
   {
     id: 5,
+    category: "words",
     title: { he: "מתקדם", en: "Advanced" },
-    lessons: [21, 22, 23, 24, 25]
+    lessons: [21, 22, 24, 25, 58]
   },
   {
     id: 6,
+    category: "words",
     title: { he: "הטיית פעלים בהווה", en: "Present Tense Conjugations" },
     lessons: [26, 27, 28, 29, 30]
   },
   {
     id: 7,
+    category: "words",
     title: { he: "הטיית פעלים בהווה 2", en: "Present Tense Conjugations 2" },
     lessons: [31, 32, 33, 34, 35]
   },
   {
     id: 8,
+    category: "words",
     title: { he: "הטיית פעלים בעבר", en: "Past Tense Conjugations" },
     lessons: [36, 37, 38, 39, 40]
   },
   {
     id: 9,
+    category: "words",
     title: { he: "הטיית פעלים בעבר 2", en: "Past Tense Conjugations 2" },
     lessons: [41, 42, 43, 44, 45]
   },
   {
     id: 10,
+    category: "words",
     title: { he: "עתיד ואוצר מילים נוסף", en: "Future Tense & More Vocabulary" },
     lessons: [46, 47, 48, 49, 50]
+  },
+  {
+    id: 12,
+    category: "numbers",
+    title: { he: "מספרים 0-19", en: "Numbers 0-19" },
+    lessons: [2, 3]
+  },
+  {
+    id: 13,
+    category: "numbers",
+    title: { he: "מספרים עגולים (20-1000)", en: "Round Numbers (20-1000)" },
+    lessons: [23]
+  },
+  {
+    id: 11,
+    category: "numbers",
+    title: { he: "מספרים מלאים עד 1000", en: "Full Numbers up to 1000" },
+    lessons: [51, 52, 53, 54, 55]
   }
 ];
 
@@ -80,7 +110,7 @@ const LESSONS = [
   },
   {
     id: 2,
-    level: 1,
+    level: 12,
     title: { he: "מספרים 0-9", en: "Numbers 0-9" },
     cards: [
       { pt: "zero", he: "אפס", en: "zero" },
@@ -97,7 +127,7 @@ const LESSONS = [
   },
   {
     id: 3,
-    level: 1,
+    level: 12,
     title: { he: "מספרים 10-19", en: "Numbers 10-19" },
     cards: [
       { pt: "dez", he: "עשר", en: "ten" },
@@ -437,7 +467,7 @@ const LESSONS = [
   },
   {
     id: 23,
-    level: 5,
+    level: 13,
     title: { he: "מספרים גדולים", en: "Bigger Numbers" },
     cards: [
       { pt: "vinte", he: "עשרים", en: "twenty" },
@@ -919,6 +949,148 @@ const LESSONS = [
       { pt: "reunião", he: "פגישה", en: "meeting" },
       { pt: "exame", he: "מבחן", en: "exam" },
       { pt: "férias", he: "חופשה", en: "vacation" }
+    ]
+  },
+
+  // ---------------- Level 11: Numbers up to 1000 ----------------
+  {
+    id: 51,
+    level: 11,
+    title: { he: "עשרות ויחידות (21-99)", en: "Tens & Units (21-99)" },
+    cards: [
+      { pt: "vinte e um", he: "עשרים ואחת", en: "twenty-one" },
+      { pt: "vinte e cinco", he: "עשרים וחמש", en: "twenty-five" },
+      { pt: "trinta e dois", he: "שלושים ושתיים", en: "thirty-two" },
+      { pt: "quarenta e sete", he: "ארבעים ושבע", en: "forty-seven" },
+      { pt: "cinquenta e três", he: "חמישים ושלוש", en: "fifty-three" },
+      { pt: "sessenta e quatro", he: "שישים וארבע", en: "sixty-four" },
+      { pt: "setenta e oito", he: "שבעים ושמונה", en: "seventy-eight" },
+      { pt: "oitenta e seis", he: "שמונים ושש", en: "eighty-six" },
+      { pt: "noventa e nove", he: "תשעים ותשע", en: "ninety-nine" },
+      { pt: "noventa e um", he: "תשעים ואחת", en: "ninety-one" }
+    ]
+  },
+  {
+    id: 52,
+    level: 11,
+    title: { he: "מאות (100-900)", en: "Hundreds (100-900)" },
+    cards: [
+      { pt: "cem", he: "מאה", en: "one hundred" },
+      { pt: "cento e um", he: "מאה ואחת", en: "one hundred and one" },
+      { pt: "duzentos", he: "מאתיים", en: "two hundred" },
+      { pt: "trezentos", he: "שלוש מאות", en: "three hundred" },
+      { pt: "quatrocentos", he: "ארבע מאות", en: "four hundred" },
+      { pt: "quinhentos", he: "חמש מאות", en: "five hundred" },
+      { pt: "seiscentos", he: "שש מאות", en: "six hundred" },
+      { pt: "setecentos", he: "שבע מאות", en: "seven hundred" },
+      { pt: "oitocentos", he: "שמונה מאות", en: "eight hundred" },
+      { pt: "novecentos", he: "תשע מאות", en: "nine hundred" }
+    ]
+  },
+  {
+    id: 53,
+    level: 11,
+    title: { he: "מספרים מלאים", en: "Full Numbers" },
+    cards: [
+      { pt: "cento e quinze", he: "מאה חמש עשרה", en: "one hundred fifteen" },
+      { pt: "duzentos e vinte e um", he: "מאתיים עשרים ואחת", en: "two hundred twenty-one" },
+      { pt: "trezentos e quarenta e cinco", he: "שלוש מאות ארבעים וחמש", en: "three hundred forty-five" },
+      { pt: "quatrocentos e três", he: "ארבע מאות ושלוש", en: "four hundred three" },
+      { pt: "quinhentos", he: "חמש מאות", en: "five hundred" },
+      { pt: "seiscentos e dez", he: "שש מאות ועשר", en: "six hundred ten" },
+      { pt: "setecentos e doze", he: "שבע מאות שתים עשרה", en: "seven hundred twelve" },
+      { pt: "oitocentos e noventa e nove", he: "שמונה מאות תשעים ותשע", en: "eight hundred ninety-nine" },
+      { pt: "novecentos e sessenta", he: "תשע מאות ושישים", en: "nine hundred sixty" },
+      { pt: "mil", he: "אלף", en: "one thousand" }
+    ]
+  },
+  {
+    id: 54,
+    level: 11,
+    title: { he: "תרגול מספרים מורכבים", en: "More Number Practice" },
+    cards: [
+      { pt: "cem", he: "מאה", en: "one hundred" },
+      { pt: "cento e cinquenta", he: "מאה וחמישים", en: "one hundred fifty" },
+      { pt: "duzentos e setenta e cinco", he: "מאתיים שבעים וחמש", en: "two hundred seventy-five" },
+      { pt: "trezentos e trinta e três", he: "שלוש מאות שלושים ושלוש", en: "three hundred thirty-three" },
+      { pt: "quatrocentos e oito", he: "ארבע מאות ושמונה", en: "four hundred eight" },
+      { pt: "quinhentos e dezenove", he: "חמש מאות ותשע עשרה", en: "five hundred nineteen" },
+      { pt: "seiscentos e quarenta e dois", he: "שש מאות ארבעים ושתיים", en: "six hundred forty-two" },
+      { pt: "setecentos e setenta e sete", he: "שבע מאות שבעים ושבע", en: "seven hundred seventy-seven" },
+      { pt: "oitocentos e cinquenta", he: "שמונה מאות וחמישים", en: "eight hundred fifty" },
+      { pt: "novecentos e noventa e nove", he: "תשע מאות תשעים ותשע", en: "nine hundred ninety-nine" }
+    ]
+  },
+  {
+    id: 55,
+    level: 11,
+    title: { he: "מספרים במשפטים", en: "Numbers in Sentences" },
+    cards: [
+      { pt: "Eu tenho vinte e cinco anos", he: "אני בן/בת עשרים וחמש", en: "I am twenty-five years old" },
+      { pt: "Isso custa cem reais", he: "זה עולה מאה ריאל", en: "That costs one hundred reais" },
+      { pt: "Ela mora no número setecentos", he: "היא גרה במספר שבע מאות", en: "She lives at number seven hundred" },
+      { pt: "O livro tem trezentas páginas", he: "לספר יש שלוש מאות עמודים", en: "The book has three hundred pages" },
+      { pt: "Nasci em mil novecentos e noventa", he: "נולדתי באלף תשע מאות ותשעים", en: "I was born in nineteen ninety" },
+      { pt: "Temos quinhentos dólares", he: "יש לנו חמש מאות דולר", en: "We have five hundred dollars" },
+      { pt: "A cidade tem mil habitantes", he: "לעיר יש אלף תושבים", en: "The city has a thousand residents" },
+      { pt: "Faltam duzentos metros", he: "נשארו מאתיים מטרים", en: "Two hundred meters left" },
+      { pt: "Ela correu quinhentos metros", he: "היא רצה חמש מאות מטר", en: "She ran five hundred meters" },
+      { pt: "Ganhei trezentos reais de bônus", he: "קיבלתי שלוש מאות ריאל בונוס", en: "I got a three-hundred-real bonus" }
+    ]
+  },
+
+  // ---------------- Extra "words" lessons (backfilling Level 1 & 5) ----------------
+  {
+    id: 56,
+    level: 1,
+    title: { he: "ימים בשבוע", en: "Days of the Week" },
+    cards: [
+      { pt: "domingo", he: "יום ראשון", en: "Sunday" },
+      { pt: "segunda-feira", he: "יום שני", en: "Monday" },
+      { pt: "terça-feira", he: "יום שלישי", en: "Tuesday" },
+      { pt: "quarta-feira", he: "יום רביעי", en: "Wednesday" },
+      { pt: "quinta-feira", he: "יום חמישי", en: "Thursday" },
+      { pt: "sexta-feira", he: "יום שישי", en: "Friday" },
+      { pt: "sábado", he: "יום שבת", en: "Saturday" },
+      { pt: "dia", he: "יום", en: "day" },
+      { pt: "fim de semana", he: "סוף שבוע", en: "weekend" },
+      { pt: "feriado", he: "חג / יום חופש", en: "holiday" }
+    ]
+  },
+  {
+    id: 57,
+    level: 1,
+    title: { he: "חודשי השנה", en: "Months of the Year" },
+    cards: [
+      { pt: "janeiro", he: "ינואר", en: "January" },
+      { pt: "fevereiro", he: "פברואר", en: "February" },
+      { pt: "março", he: "מרץ", en: "March" },
+      { pt: "abril", he: "אפריל", en: "April" },
+      { pt: "maio", he: "מאי", en: "May" },
+      { pt: "junho", he: "יוני", en: "June" },
+      { pt: "julho", he: "יולי", en: "July" },
+      { pt: "agosto", he: "אוגוסט", en: "August" },
+      { pt: "setembro", he: "ספטמבר", en: "September" },
+      { pt: "outubro", he: "אוקטובר", en: "October" },
+      { pt: "novembro", he: "נובמבר", en: "November" },
+      { pt: "dezembro", he: "דצמבר", en: "December" }
+    ]
+  },
+  {
+    id: 58,
+    level: 5,
+    title: { he: "מקומות בעיר", en: "Places in the City" },
+    cards: [
+      { pt: "igreja", he: "כנסייה", en: "church" },
+      { pt: "banco", he: "בנק", en: "bank" },
+      { pt: "farmácia", he: "בית מרקחת", en: "pharmacy" },
+      { pt: "mercado", he: "שוק / סופרמרקט", en: "market" },
+      { pt: "parque", he: "פארק", en: "park" },
+      { pt: "hospital", he: "בית חולים", en: "hospital" },
+      { pt: "biblioteca", he: "ספרייה", en: "library" },
+      { pt: "museu", he: "מוזיאון", en: "museum" },
+      { pt: "praça", he: "כיכר", en: "square / plaza" },
+      { pt: "correio", he: "דואר", en: "post office" }
     ]
   }
 ];

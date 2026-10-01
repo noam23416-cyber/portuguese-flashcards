@@ -1,9 +1,9 @@
-// Minimal offline cache so the app works on iPhone even without a connection
-// once it has been opened at least once (and especially once added to the
-// Home Screen). Bump CACHE_NAME when you change any cached file so the
-// browser fetches the fresh versions.
+// Offline cache so the app still works on iPhone without a connection,
+// using a "network-first" strategy: every load tries the network first
+// (so updates you push show up immediately), and only falls back to the
+// last cached copy if there's no connection at all.
 
-const CACHE_NAME = "pt-flashcards-v1";
+const CACHE_NAME = "pt-flashcards-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -34,17 +34,17 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   // Only handle GET requests for same-origin assets
   if (event.request.method !== "GET") return;
+  if (!event.request.url.startsWith(self.location.origin)) return;
+
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
-        // Cache newly fetched same-origin files for next time
-        if (response.ok && event.request.url.startsWith(self.location.origin)) {
+    fetch(event.request)
+      .then(response => {
+        if (response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => cached);
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });

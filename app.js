@@ -4,13 +4,17 @@
 
 const STORAGE_KEY = "pt_app_progress_v1";
 
+function defaultProgress() {
+  return { completedLessons: [], streak: 0, lastStudyDate: null, activeCategory: "words" };
+}
+
 function loadProgress() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { completedLessons: [], streak: 0, lastStudyDate: null };
-    return JSON.parse(raw);
+    if (!raw) return defaultProgress();
+    return Object.assign(defaultProgress(), JSON.parse(raw));
   } catch (e) {
-    return { completedLessons: [], streak: 0, lastStudyDate: null };
+    return defaultProgress();
   }
 }
 
@@ -39,9 +43,23 @@ function bumpStreak() {
   saveProgress(progress);
 }
 
+// Lessons unlock sequentially, but separately per category ("words" vs
+// "numbers") — e.g. the first numbers lesson is always unlocked even if
+// no words lessons have been completed yet, and vice versa.
+function categoryOfLesson(lessonId) {
+  const lvl = LEVELS.find(l => l.lessons.includes(lessonId));
+  return lvl ? lvl.category : "words";
+}
+
+function categoryLessonOrder(category) {
+  return LEVELS.filter(l => l.category === category).flatMap(l => l.lessons);
+}
+
 function isLessonUnlocked(lessonId) {
-  if (lessonId === 1) return true;
-  return progress.completedLessons.includes(lessonId - 1);
+  const order = categoryLessonOrder(categoryOfLesson(lessonId));
+  const idx = order.indexOf(lessonId);
+  if (idx <= 0) return true;
+  return progress.completedLessons.includes(order[idx - 1]);
 }
 
 function isLessonDone(lessonId) {
@@ -85,13 +103,37 @@ function speakPortuguese(text) {
 }
 
 // ---------------- Home screen rendering ----------------
+const CATEGORY_LABELS = {
+  words: { he: "📚 מילים", en: "Words" },
+  numbers: { he: "🔢 מספרים", en: "Numbers" }
+};
+
+function setActiveCategory(category) {
+  progress.activeCategory = category;
+  saveProgress(progress);
+  renderHome();
+}
+
+function renderCategoryTabs() {
+  const tabsEl = document.getElementById("category-tabs");
+  tabsEl.innerHTML = "";
+  Object.keys(CATEGORY_LABELS).forEach(cat => {
+    const btn = document.createElement("button");
+    btn.className = "tab-btn" + (progress.activeCategory === cat ? " active" : "");
+    btn.textContent = CATEGORY_LABELS[cat].he;
+    btn.addEventListener("click", () => setActiveCategory(cat));
+    tabsEl.appendChild(btn);
+  });
+}
+
 function renderHome() {
   document.getElementById("streak-count").textContent = progress.streak || 0;
+  renderCategoryTabs();
 
   const container = document.getElementById("levels-container");
   container.innerHTML = "";
 
-  LEVELS.forEach(level => {
+  LEVELS.filter(level => level.category === progress.activeCategory).forEach(level => {
     const doneCount = level.lessons.filter(id => isLessonDone(id)).length;
     const total = level.lessons.length;
 
@@ -100,7 +142,7 @@ function renderHome() {
 
     const title = document.createElement("div");
     title.className = "level-title";
-    title.innerHTML = `<span>${level.title.he} · ${total * 10} מילים</span>
+    title.innerHTML = `<span>${level.title.he} · ${total * 10} כרטיסיות</span>
       <span class="level-sub">${level.title.en}</span>`;
     block.appendChild(title);
 
@@ -150,6 +192,11 @@ function renderCard() {
   const card = currentLesson.cards[currentIndex];
   isFlipped = false;
   const flashcard = document.getElementById("flashcard");
+
+  // Snap back to the front face instantly (no flip animation) when a new
+  // card is shown, so the new word never briefly flashes its translation
+  // mid-spin. "no-anim" temporarily disables the CSS transition.
+  flashcard.classList.add("no-anim");
   flashcard.classList.remove("flipped");
 
   document.getElementById("pt-word").textContent = card.pt;
@@ -164,6 +211,10 @@ function renderCard() {
 
   document.getElementById("prev-card-btn").disabled = currentIndex === 0;
   updateNextButtonLabel();
+
+  // re-enable the flip animation on the next frame, after the instant
+  // snap-back above has already taken effect
+  requestAnimationFrame(() => flashcard.classList.remove("no-anim"));
 
   // auto-play pronunciation when a new card appears
   speakPortuguese(card.pt);
@@ -258,7 +309,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("reset-progress-btn").addEventListener("click", () => {
     if (confirm("לאפס את כל ההתקדמות? / Reset all progress?")) {
-      progress = { completedLessons: [], streak: 0, lastStudyDate: null };
+      const keepCategory = progress.activeCategory;
+      progress = defaultProgress();
+      progress.activeCategory = keepCategory;
       saveProgress(progress);
       renderHome();
     }
