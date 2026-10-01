@@ -115,28 +115,33 @@ html, body {
 
 .lesson-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
 .lesson-chip {
-  aspect-ratio: 1;
+  min-height: 72px;
   border-radius: 14px;
   border: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
+  gap: 3px;
   font-weight: 700;
   color: white;
   background: var(--green);
   box-shadow: 0 3px 0 var(--green-dark);
   cursor: pointer;
-  padding: 2px;
-  line-height: 1.1;
+  padding: 8px 4px;
+  line-height: 1.15;
 }
-.lesson-chip .chip-num { font-size: 1rem; }
+.lesson-chip .chip-num { font-size: 0.8rem; opacity: 0.9; }
+.lesson-chip .chip-topic {
+  font-size: 0.72rem;
+  text-align: center;
+  word-break: break-word;
+}
 .lesson-chip.locked {
   background: #d1d5db;
   box-shadow: 0 3px 0 #9ca3af;
@@ -147,6 +152,11 @@ html, body {
   background: var(--yellow);
   box-shadow: 0 3px 0 #b8960b;
   color: #3a2e00;
+}
+.lesson-chip.done.needs-review {
+  background: #f59e0b;
+  box-shadow: 0 3px 0 #b45309;
+  color: white;
 }
 .lesson-chip:active:not(.locked) { transform: translateY(2px); box-shadow: none; }
 
@@ -264,5 +274,21 @@ html, body {
 .complete-box { text-align: center; max-width: 320px; margin: 0 auto; }
 .complete-emoji { font-size: 4rem; margin-bottom: 10px; }
 .complete-box h2 { margin: 0 0 8px; }
-#complete-lesson-title { color: var(--muted); margin-bottom: 24px; }
+#complete-lesson-title { color: var(--muted); margin-bottom: 16px; }
 .complete-box .nav-btn { display: block; width: 100%; margin-bottom: 10px; }
+
+.review-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 20px;
+  text-align: right;
+  font-size: 0.85rem;
+  color: #92400e;
+  cursor: pointer;
+}
+.review-toggle input { width: 18px; height: 18px; flex-shrink: 0; accent-color: #f59e0b; }

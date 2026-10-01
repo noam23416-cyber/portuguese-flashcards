@@ -5,7 +5,13 @@
 const STORAGE_KEY = "pt_app_progress_v1";
 
 function defaultProgress() {
-  return { completedLessons: [], streak: 0, lastStudyDate: null, activeCategory: "words" };
+  return {
+    completedLessons: [],
+    reviewLessons: [], // lessons marked "there were words I didn't know"
+    streak: 0,
+    lastStudyDate: null,
+    activeCategory: "words"
+  };
 }
 
 function loadProgress() {
@@ -66,6 +72,20 @@ function isLessonDone(lessonId) {
   return progress.completedLessons.includes(lessonId);
 }
 
+function needsReview(lessonId) {
+  return progress.reviewLessons.includes(lessonId);
+}
+
+function setNeedsReview(lessonId, flag) {
+  const has = progress.reviewLessons.includes(lessonId);
+  if (flag && !has) {
+    progress.reviewLessons.push(lessonId);
+  } else if (!flag && has) {
+    progress.reviewLessons = progress.reviewLessons.filter(id => id !== lessonId);
+  }
+  saveProgress(progress);
+}
+
 // ---------------- Screen navigation ----------------
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
@@ -105,7 +125,8 @@ function speakPortuguese(text) {
 // ---------------- Home screen rendering ----------------
 const CATEGORY_LABELS = {
   words: { he: "📚 מילים", en: "Words" },
-  numbers: { he: "🔢 מספרים", en: "Numbers" }
+  numbers: { he: "🔢 מספרים", en: "Numbers" },
+  sentences: { he: "✍️ השלמת משפטים", en: "Sentences" }
 };
 
 function setActiveCategory(category) {
@@ -136,13 +157,17 @@ function renderHome() {
   LEVELS.filter(level => level.category === progress.activeCategory).forEach(level => {
     const doneCount = level.lessons.filter(id => isLessonDone(id)).length;
     const total = level.lessons.length;
+    const cardCount = level.lessons.reduce((sum, id) => {
+      const lesson = LESSONS.find(l => l.id === id);
+      return sum + (lesson ? lesson.cards.length : 0);
+    }, 0);
 
     const block = document.createElement("div");
     block.className = "level-block";
 
     const title = document.createElement("div");
     title.className = "level-title";
-    title.innerHTML = `<span>${level.title.he} · ${total * 10} כרטיסיות</span>
+    title.innerHTML = `<span>${level.title.he} · ${cardCount} כרטיסיות</span>
       <span class="level-sub">${level.title.en}</span>`;
     block.appendChild(title);
 
@@ -162,9 +187,17 @@ function renderHome() {
       const btn = document.createElement("button");
       const unlocked = isLessonUnlocked(lessonId);
       const done = isLessonDone(lessonId);
-      btn.className = "lesson-chip" + (!unlocked ? " locked" : "") + (done ? " done" : "");
-      btn.innerHTML = `<span class="chip-num">${done ? "✓" : idx + 1}</span>`;
-      btn.title = `${lesson.title.he} / ${lesson.title.en}`;
+      const flagged = done && needsReview(lessonId);
+      btn.className = "lesson-chip" +
+        (!unlocked ? " locked" : "") +
+        (done ? " done" : "") +
+        (flagged ? " needs-review" : "");
+      const badge = flagged ? "↻" : (done ? "✓" : (unlocked ? idx + 1 : "🔒"));
+      const topicLabel = lesson.short || lesson.title.he;
+      btn.innerHTML = `<span class="chip-num">${badge}</span><span class="chip-topic">${topicLabel}</span>`;
+      btn.title = flagged
+        ? `${lesson.title.he} / ${lesson.title.en} — מסומן לחזרה`
+        : `${lesson.title.he} / ${lesson.title.en}`;
       if (unlocked) {
         btn.addEventListener("click", () => openLesson(lessonId));
       }
@@ -202,7 +235,7 @@ function renderCard() {
   document.getElementById("pt-word").textContent = card.pt;
   document.getElementById("back-he").textContent = card.he;
   document.getElementById("back-en").textContent = card.en;
-  document.getElementById("back-pt").textContent = card.pt;
+  document.getElementById("back-pt").textContent = card.full || card.pt;
 
   document.getElementById("card-counter").textContent =
     `${currentIndex + 1} / ${currentLesson.cards.length}`;
@@ -216,8 +249,12 @@ function renderCard() {
   // snap-back above has already taken effect
   requestAnimationFrame(() => flashcard.classList.remove("no-anim"));
 
-  // auto-play pronunciation when a new card appears
-  speakPortuguese(card.pt);
+  // Auto-play pronunciation when a new card appears — but for a
+  // fill-in-the-blank sentence (card.full set), there's nothing sensible
+  // to read aloud until it's revealed, so we wait for the flip instead.
+  if (!card.full) {
+    speakPortuguese(card.pt);
+  }
 }
 
 function updateNextButtonLabel() {
@@ -234,6 +271,12 @@ function flipCard() {
   isFlipped = !isFlipped;
   document.getElementById("flashcard").classList.toggle("flipped", isFlipped);
   updateNextButtonLabel();
+
+  // Fill-in-the-blank cards: speak the completed sentence once revealed.
+  const card = currentLesson.cards[currentIndex];
+  if (isFlipped && card.full) {
+    speakPortuguese(card.full);
+  }
 }
 
 // Pressing "next" first flips the card to reveal the translation; only a
@@ -268,7 +311,15 @@ function finishLesson() {
 
   document.getElementById("complete-lesson-title").textContent =
     `${currentLesson.title.he} · ${currentLesson.title.en}`;
+  document.getElementById("mark-review-checkbox").checked = needsReview(currentLesson.id);
   showScreen("screen-complete");
+}
+
+// Reads the "there were words I didn't know" checkbox on the complete
+// screen and saves it as the lesson's review flag.
+function applyReviewFlagFromCheckbox() {
+  const checked = document.getElementById("mark-review-checkbox").checked;
+  setNeedsReview(currentLesson.id, checked);
 }
 
 // ---------------- Swipe gestures ----------------
@@ -293,7 +344,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("next-card-btn").addEventListener("click", nextCard);
   document.getElementById("prev-card-btn").addEventListener("click", prevCard);
   document.getElementById("replay-audio-btn").addEventListener("click", () => {
-    if (currentLesson) speakPortuguese(currentLesson.cards[currentIndex].pt);
+    if (!currentLesson) return;
+    const card = currentLesson.cards[currentIndex];
+    speakPortuguese(card.full || card.pt);
   });
   document.getElementById("back-btn").addEventListener("click", () => {
     window.speechSynthesis && window.speechSynthesis.cancel();
@@ -301,9 +354,11 @@ document.addEventListener("DOMContentLoaded", () => {
     showScreen("screen-home");
   });
   document.getElementById("complete-repeat-btn").addEventListener("click", () => {
+    applyReviewFlagFromCheckbox();
     openLesson(currentLesson.id);
   });
   document.getElementById("complete-continue-btn").addEventListener("click", () => {
+    applyReviewFlagFromCheckbox();
     renderHome();
     showScreen("screen-home");
   });
