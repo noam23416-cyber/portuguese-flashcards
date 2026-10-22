@@ -5,7 +5,13 @@
 const STORAGE_KEY = "pt_app_progress_v1";
 
 function defaultProgress() {
-  return { completedLessons: [], streak: 0, lastStudyDate: null, activeCategory: "words" };
+  return {
+    completedLessons: [],
+    unknownCards: [], // keys "lessonId::pt" for individual cards marked "I didn't know this"
+    streak: 0,
+    lastStudyDate: null,
+    activeCategory: "words"
+  };
 }
 
 function loadProgress() {
@@ -66,6 +72,85 @@ function isLessonDone(lessonId) {
   return progress.completedLessons.includes(lessonId);
 }
 
+// ---------------- Per-card "I didn't know this" marking ----------------
+// Cards are identified by "<lessonId>::<pt text>" so marks survive content
+// reordering as long as the Portuguese text itself doesn't change.
+function cardKey(lessonId, card) {
+  return lessonId + "::" + card.pt;
+}
+
+// A card carries its origin lesson id as "_origLessonId" once it's been
+// pulled into a review session (so marking still points back to the
+// lesson it actually came from, even inside a cross-lesson review mix).
+function originLessonId(card) {
+  if (card._origLessonId !== undefined && card._origLessonId !== null) {
+    return card._origLessonId;
+  }
+  return currentLesson ? currentLesson.id : null;
+}
+
+function isCardUnknown(card) {
+  return progress.unknownCards.includes(cardKey(originLessonId(card), card));
+}
+
+function toggleCardUnknown(card) {
+  const key = cardKey(originLessonId(card), card);
+  const idx = progress.unknownCards.indexOf(key);
+  if (idx === -1) {
+    progress.unknownCards.push(key);
+  } else {
+    progress.unknownCards.splice(idx, 1);
+  }
+  saveProgress(progress);
+}
+
+// Tags each card in a list with its current origin lesson id, so the tag
+// survives being carried into a review session (where currentLesson.id
+// changes to "review").
+function withOrigin(cards) {
+  return cards.map(c => Object.assign({}, c, { _origLessonId: originLessonId(c) }));
+}
+
+// Resolves every card marked unknown within one whole level/topic group
+// (across all of that level's lessons), for the "finished the whole
+// topic" review — explicit lessonId per lesson, not dependent on
+// whatever currentLesson happens to be at call time.
+function getUnknownCardsForLevel(level) {
+  const result = [];
+  level.lessons.forEach(lessonId => {
+    const lesson = LESSONS.find(l => l.id === lessonId);
+    if (!lesson) return;
+    lesson.cards.forEach(card => {
+      if (progress.unknownCards.includes(cardKey(lessonId, card))) {
+        result.push(Object.assign({}, card, { _origLessonId: lessonId }));
+      }
+    });
+  });
+  return result;
+}
+
+function isLevelComplete(level) {
+  return level.lessons.every(id => progress.completedLessons.includes(id));
+}
+
+// Resolves every globally-marked-unknown card back to a real card object,
+// across all lessons, for the home-screen "practice unknown words" entry.
+function getAllUnknownCardObjects() {
+  const result = [];
+  progress.unknownCards.forEach(key => {
+    const sep = key.indexOf("::");
+    if (sep === -1) return;
+    const lessonId = Number(key.slice(0, sep));
+    const pt = key.slice(sep + 2);
+    const lesson = LESSONS.find(l => l.id === lessonId);
+    if (!lesson) return;
+    const card = lesson.cards.find(c => c.pt === pt);
+    if (!card) return;
+    result.push(Object.assign({}, card, { _origLessonId: lessonId }));
+  });
+  return result;
+}
+
 // ---------------- Screen navigation ----------------
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
@@ -105,7 +190,8 @@ function speakPortuguese(text) {
 // ---------------- Home screen rendering ----------------
 const CATEGORY_LABELS = {
   words: { he: "📚 מילים", en: "Words" },
-  numbers: { he: "🔢 מספרים", en: "Numbers" }
+  numbers: { he: "🔢 מספרים", en: "Numbers" },
+  sentences: { he: "✍️ השלמת משפטים", en: "Sentences" }
 };
 
 function setActiveCategory(category) {
@@ -130,19 +216,33 @@ function renderHome() {
   document.getElementById("streak-count").textContent = progress.streak || 0;
   renderCategoryTabs();
 
+  const unknownBtn = document.getElementById("unknown-words-btn");
+  const totalUnknown = progress.unknownCards.length;
+  if (totalUnknown > 0) {
+    unknownBtn.style.display = "block";
+    unknownBtn.textContent =
+      `🏳️ תרגל ${totalUnknown} מילים שלא ידעת / Practice ${totalUnknown} unknown words`;
+  } else {
+    unknownBtn.style.display = "none";
+  }
+
   const container = document.getElementById("levels-container");
   container.innerHTML = "";
 
   LEVELS.filter(level => level.category === progress.activeCategory).forEach(level => {
     const doneCount = level.lessons.filter(id => isLessonDone(id)).length;
     const total = level.lessons.length;
+    const cardCount = level.lessons.reduce((sum, id) => {
+      const lesson = LESSONS.find(l => l.id === id);
+      return sum + (lesson ? lesson.cards.length : 0);
+    }, 0);
 
     const block = document.createElement("div");
     block.className = "level-block";
 
     const title = document.createElement("div");
     title.className = "level-title";
-    title.innerHTML = `<span>${level.title.he} · ${total * 10} כרטיסיות</span>
+    title.innerHTML = `<span>${level.title.he} · ${cardCount} כרטיסיות</span>
       <span class="level-sub">${level.title.en}</span>`;
     block.appendChild(title);
 
@@ -162,8 +262,12 @@ function renderHome() {
       const btn = document.createElement("button");
       const unlocked = isLessonUnlocked(lessonId);
       const done = isLessonDone(lessonId);
-      btn.className = "lesson-chip" + (!unlocked ? " locked" : "") + (done ? " done" : "");
-      btn.innerHTML = `<span class="chip-num">${done ? "✓" : idx + 1}</span>`;
+      btn.className = "lesson-chip" +
+        (!unlocked ? " locked" : "") +
+        (done ? " done" : "");
+      const badge = done ? "✓" : (unlocked ? idx + 1 : "🔒");
+      const topicLabel = lesson.short || lesson.title.he;
+      btn.innerHTML = `<span class="chip-num">${badge}</span><span class="chip-topic">${topicLabel}</span>`;
       btn.title = `${lesson.title.he} / ${lesson.title.en}`;
       if (unlocked) {
         btn.addEventListener("click", () => openLesson(lessonId));
@@ -180,12 +284,36 @@ function renderHome() {
 let currentLesson = null;
 let currentIndex = 0;
 let isFlipped = false;
+let isReviewMode = false; // true while practicing a dynamically-built "unknown words" set
+let pendingReviewCards = []; // cards offered on the complete screen's review button
+let pendingReviewTitle = { he: "", en: "" }; // title to use for that review session
 
 function openLesson(lessonId) {
   currentLesson = LESSONS.find(l => l.id === lessonId);
+  isReviewMode = false;
   currentIndex = 0;
   showScreen("screen-lesson");
   renderCard();
+}
+
+// Starts a practice session built from an arbitrary list of cards (e.g.
+// the ones just marked "didn't know this") instead of a fixed lesson.
+// Cards must already carry a usable origin lesson id (see withOrigin /
+// getAllUnknownCardObjects) so marking still works correctly inside it.
+function startReviewSession(cards, titleHe, titleEn) {
+  currentLesson = { id: "review", title: { he: titleHe, en: titleEn }, cards: cards };
+  isReviewMode = true;
+  currentIndex = 0;
+  showScreen("screen-lesson");
+  renderCard();
+}
+
+function restartCurrentSession() {
+  if (isReviewMode) {
+    startReviewSession(currentLesson.cards, currentLesson.title.he, currentLesson.title.en);
+  } else {
+    openLesson(currentLesson.id);
+  }
 }
 
 function renderCard() {
@@ -202,7 +330,7 @@ function renderCard() {
   document.getElementById("pt-word").textContent = card.pt;
   document.getElementById("back-he").textContent = card.he;
   document.getElementById("back-en").textContent = card.en;
-  document.getElementById("back-pt").textContent = card.pt;
+  document.getElementById("back-pt").textContent = card.full || card.pt;
 
   document.getElementById("card-counter").textContent =
     `${currentIndex + 1} / ${currentLesson.cards.length}`;
@@ -211,13 +339,23 @@ function renderCard() {
 
   document.getElementById("prev-card-btn").disabled = currentIndex === 0;
   updateNextButtonLabel();
+  updateUnknownBtn();
 
   // re-enable the flip animation on the next frame, after the instant
   // snap-back above has already taken effect
   requestAnimationFrame(() => flashcard.classList.remove("no-anim"));
 
-  // auto-play pronunciation when a new card appears
-  speakPortuguese(card.pt);
+  // Auto-play pronunciation when a new card appears — but for a
+  // fill-in-the-blank sentence (card.full set), there's nothing sensible
+  // to read aloud until it's revealed, so we wait for the flip instead.
+  if (!card.full) {
+    speakPortuguese(card.pt);
+  }
+}
+
+function updateUnknownBtn() {
+  const card = currentLesson.cards[currentIndex];
+  document.getElementById("mark-unknown-btn").classList.toggle("active", isCardUnknown(card));
 }
 
 function updateNextButtonLabel() {
@@ -234,6 +372,12 @@ function flipCard() {
   isFlipped = !isFlipped;
   document.getElementById("flashcard").classList.toggle("flipped", isFlipped);
   updateNextButtonLabel();
+
+  // Fill-in-the-blank cards: speak the completed sentence once revealed.
+  const card = currentLesson.cards[currentIndex];
+  if (isFlipped && card.full) {
+    speakPortuguese(card.full);
+  }
 }
 
 // Pressing "next" first flips the card to reveal the translation; only a
@@ -260,14 +404,59 @@ function prevCard() {
 }
 
 function finishLesson() {
-  if (!progress.completedLessons.includes(currentLesson.id)) {
-    progress.completedLessons.push(currentLesson.id);
+  let justCompletedGroup = null; // the level, if this lesson finished its whole topic group
+
+  if (!isReviewMode) {
+    if (!progress.completedLessons.includes(currentLesson.id)) {
+      progress.completedLessons.push(currentLesson.id);
+    }
+    bumpStreak();
+    saveProgress(progress);
+
+    const level = LEVELS.find(l => l.lessons.includes(currentLesson.id));
+    if (level && isLevelComplete(level)) {
+      justCompletedGroup = level;
+    }
   }
-  bumpStreak();
-  saveProgress(progress);
 
   document.getElementById("complete-lesson-title").textContent =
     `${currentLesson.title.he} · ${currentLesson.title.en}`;
+
+  // By default, offer to practice just the cards marked "didn't know
+  // this" during the session that was just finished. But if this lesson
+  // was the LAST lesson left in its topic group, offer the full set of
+  // unknown-marked words across every lesson in that whole group instead
+  // — that's the moment the user asked to review everything they
+  // flagged while working through the topic.
+  const reviewBtn = document.getElementById("complete-review-btn");
+  if (justCompletedGroup) {
+    pendingReviewCards = getUnknownCardsForLevel(justCompletedGroup);
+    pendingReviewTitle = {
+      he: `תרגול נושא: ${justCompletedGroup.title.he}`,
+      en: `Topic review: ${justCompletedGroup.title.en}`
+    };
+    if (pendingReviewCards.length > 0) {
+      reviewBtn.style.display = "block";
+      reviewBtn.textContent =
+        `🏳️ סיימת את הנושא! תרגל ${pendingReviewCards.length} מילים שלא ידעת / Topic done — practice unknown words`;
+    } else {
+      reviewBtn.style.display = "none";
+    }
+  } else {
+    pendingReviewCards = withOrigin(currentLesson.cards.filter(c => isCardUnknown(c)));
+    pendingReviewTitle = {
+      he: `${currentLesson.title.he} – תרגול`,
+      en: `${currentLesson.title.en} – Review`
+    };
+    if (pendingReviewCards.length > 0) {
+      reviewBtn.style.display = "block";
+      reviewBtn.textContent =
+        `🏳️ תרגל ${pendingReviewCards.length} מילים שלא ידעת / Practice unknown words`;
+    } else {
+      reviewBtn.style.display = "none";
+    }
+  }
+
   showScreen("screen-complete");
 }
 
@@ -293,7 +482,19 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("next-card-btn").addEventListener("click", nextCard);
   document.getElementById("prev-card-btn").addEventListener("click", prevCard);
   document.getElementById("replay-audio-btn").addEventListener("click", () => {
-    if (currentLesson) speakPortuguese(currentLesson.cards[currentIndex].pt);
+    if (!currentLesson) return;
+    const card = currentLesson.cards[currentIndex];
+    speakPortuguese(card.full || card.pt);
+  });
+  document.getElementById("mark-unknown-btn").addEventListener("click", () => {
+    if (!currentLesson) return;
+    toggleCardUnknown(currentLesson.cards[currentIndex]);
+    updateUnknownBtn();
+  });
+  document.getElementById("unknown-words-btn").addEventListener("click", () => {
+    const cards = getAllUnknownCardObjects();
+    if (cards.length === 0) return;
+    startReviewSession(cards, "מילים שלא ידעת", "Words you didn't know");
   });
   document.getElementById("back-btn").addEventListener("click", () => {
     window.speechSynthesis && window.speechSynthesis.cancel();
@@ -301,7 +502,10 @@ document.addEventListener("DOMContentLoaded", () => {
     showScreen("screen-home");
   });
   document.getElementById("complete-repeat-btn").addEventListener("click", () => {
-    openLesson(currentLesson.id);
+    restartCurrentSession();
+  });
+  document.getElementById("complete-review-btn").addEventListener("click", () => {
+    startReviewSession(pendingReviewCards, pendingReviewTitle.he, pendingReviewTitle.en);
   });
   document.getElementById("complete-continue-btn").addEventListener("click", () => {
     renderHome();

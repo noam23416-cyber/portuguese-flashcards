@@ -115,28 +115,33 @@ html, body {
 
 .lesson-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
 .lesson-chip {
-  aspect-ratio: 1;
+  min-height: 72px;
   border-radius: 14px;
   border: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
+  gap: 3px;
   font-weight: 700;
   color: white;
   background: var(--green);
   box-shadow: 0 3px 0 var(--green-dark);
   cursor: pointer;
-  padding: 2px;
-  line-height: 1.1;
+  padding: 8px 4px;
+  line-height: 1.15;
 }
-.lesson-chip .chip-num { font-size: 1rem; }
+.lesson-chip .chip-num { font-size: 0.8rem; opacity: 0.9; }
+.lesson-chip .chip-topic {
+  font-size: 0.72rem;
+  text-align: center;
+  word-break: break-word;
+}
 .lesson-chip.locked {
   background: #d1d5db;
   box-shadow: 0 3px 0 #9ca3af;
@@ -149,6 +154,22 @@ html, body {
   color: #3a2e00;
 }
 .lesson-chip:active:not(.locked) { transform: translateY(2px); box-shadow: none; }
+
+.unknown-words-btn {
+  display: block;
+  width: 100%;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #92400e;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  text-align: center;
+}
+.unknown-words-btn:active { transform: translateY(1px); }
 
 .home-footer { margin-top: auto; text-align: center; padding-top: 24px; }
 .link-btn {
@@ -182,6 +203,10 @@ html, body {
 .lesson-progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
 #lesson-progress-fill { height: 100%; width: 10%; background: var(--green); transition: width .25s ease; }
 #card-counter { font-size: 0.75rem; color: var(--muted); direction: ltr; }
+
+.unknown-btn { font-size: 1.25rem; opacity: 0.45; transition: opacity .15s ease, transform .15s ease; }
+.unknown-btn.active { opacity: 1; background: #fff7ed; box-shadow: 0 2px 6px rgba(245,158,11,0.4); }
+.unknown-btn:active { transform: scale(0.92); }
 
 .card-stage {
   flex: 1;
@@ -264,5 +289,11 @@ html, body {
 .complete-box { text-align: center; max-width: 320px; margin: 0 auto; }
 .complete-emoji { font-size: 4rem; margin-bottom: 10px; }
 .complete-box h2 { margin: 0 0 8px; }
-#complete-lesson-title { color: var(--muted); margin-bottom: 24px; }
+#complete-lesson-title { color: var(--muted); margin-bottom: 16px; }
 .complete-box .nav-btn { display: block; width: 100%; margin-bottom: 10px; }
+
+.review-btn {
+  background: #f59e0b !important;
+  color: white !important;
+  box-shadow: 0 3px 0 #b45309 !important;
+}
